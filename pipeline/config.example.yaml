@@ -1,0 +1,329 @@
+# Reply pipeline config — copy this file to `config.yaml` and edit that copy.
+# `config.yaml` is git-ignored so your account lists stay private.
+#
+# Flow: pull replies under the accounts below (and/or search results), THEN keep
+# replies whose text matches the keyword themes, THEN (stage 2) the LLM gate refines.
+# accounts = WHERE to look, themes = WHAT to look for, searches = what to search.
+#
+# With the LLM gate doing the final judgment, the keyword nets below are
+# intentionally BROAD (recall-first). The LLM removes the sarcasm/commentary.
+
+# WHERE: the accounts whose reply sections you want to mine (handles, no @).
+accounts:
+  - example_account_1
+  - example_account_2
+  - example_account_3
+
+# WHAT: keyword themes. weight feeds the intent score; higher = stronger signal.
+themes:
+  - name: "Looking for early calls"
+    weight: 5
+    phrases: ["how do you find", "how do people find", "how are you finding",
+              "where do you find", "how do you find these", "how do you find gems",
+              "how do you catch", "how do i catch", "find them early", "find coins early",
+              "how to find early", "before it pumps", "before they run", "how do you guys find",
+              "research before aping", "how are you catching these"]
+  - name: "Wants a tool"
+    weight: 5
+    phrases: ["best tool", "any tool", "what tool", "which tool", "recommend a scanner",
+              "best scanner", "which scanner", "any bot", "which bot", "best bot",
+              "what are you using", "what do you use", "advice on scanning", "good scanner",
+              "any good tool", "recommend a bot", "what feed do you use"]
+  - name: "Wants whale tracking"
+    weight: 5
+    phrases: ["track wallets", "track whale", "whale wallet", "smart money", "monitor wallets",
+              "monitor a wallet", "wallet tracker", "copy trade", "copytrade", "follow the whales",
+              "track smart money", "follow smart money", "monitor 500 wallets", "wallet bundles"]
+  - name: "Missed opportunities"
+    weight: 4
+    phrases: ["missed the pump", "missed the run", "missed another", "missed it", "keep missing",
+              "always too late", "too late again", "im too late", "missing runners", "fumbled",
+              "fumbled the bag", "priced out", "sold too early", "always miss", "sidelined"]
+  - name: "Regret"
+    weight: 4
+    phrases: ["should have bought", "wish i bought", "wish i aped", "should have aped",
+              "paper handed", "paperhanded", "jeeted", "i jeeted", "sold the bottom",
+              "i hesitated", "wish i had", "shouldnt have sold", "sold too soon"]
+  - name: "FOMO / needs alpha"
+    weight: 3
+    phrases: ["dont want to miss", "don't want to miss", "cant miss", "need alpha",
+              "wheres the alpha", "where is the alpha", "next runner", "next 100x",
+              "dont wanna miss", "dont wanna fumble", "whats the next"]
+  - name: "Rug / trust fatigue"
+    weight: 4
+    phrases: ["got rugged", "another rug", "tired of rugs", "keep getting rugged",
+              "so many scams", "so many rugs", "paid callers", "paid kol", "kol dump",
+              "sick of rugs", "everything rugs", "always rugged"]
+  - name: "Newcomer / onboarding"
+    weight: 3
+    phrases: ["new to the trenches", "new to solana", "new to memecoins", "just started trading",
+              "how do i start", "where do i start", "any tips for a beginner", "new to crypto",
+              "just getting into"]
+
+# fuzzy matching catches typos/variants (e.g. "missd anethr"). 0-100.
+fuzzy_threshold: 86
+
+# Precision guards: drop thin/low-signal replies before keyword matching.
+min_reply_chars: 15       # skip replies shorter than this many characters
+min_reply_words: 3        # ...or fewer than this many words
+
+# Never treat these accounts as leads (projects, promo, bots). Add your own.
+exclude_handles: []
+
+# ---------------------------------------------------------------------------
+# NEGATIVE FILTERS — drop a reply outright, whatever it scores. Applied before
+# scoring, so a vetoed reply never reaches the sheet. Matching is word-bounded
+# ("ass" will not match "class"). Every drop is logged; `reclassify.py
+# --vetoed-out vetoed.csv` writes the full audit trail.
+# ---------------------------------------------------------------------------
+veto:
+  # Hateful content. Checked FIRST and unconditionally — a post here is dropped
+  # even if it also reads as a perfect lead. No terms ship in this repo; point
+  # this at your own list (one term per line, # for comments). The file should
+  # be git-ignored. Public starting points: the LDNOOBW list, or Hatebase.
+  # If the path is set but missing, the run fails loudly rather than silently
+  # disabling the filter.
+  # hate_terms_file: hate_terms.txt
+  hate_terms: []
+
+  # Shills. Contract addresses and t.me/discord.gg invites are already caught
+  # by the built-in patterns below, so these are for the phrasing.
+  promo_markers:
+    - "dm me"
+    - "dm for"
+    - "presale"
+    - "join my"
+    - "join our"
+    - "link in bio"
+    - "referral"
+    - "use my code"
+    - "call channel"
+    - "entry:"
+    - "target:"
+    - "not financial advice"
+
+  # TODO(you): accounts marketing a rival product. Someone SELLING a solution is
+  # never someone who needs one. Two kinds of entry work here:
+  #   * competitor product names — only you know who these are
+  #   * first-person selling language, listed below as a starting point
+  competitor_markers:
+    - "we built"
+    - "we made"
+    - "our tool"
+    - "our bot"
+    - "our scanner"
+    - "try our"
+    - "free beta"
+    - "sign up at"
+    - "check out my bot"
+    # - "rivalscan"        # <- add your actual competitors here
+    # - "someothertool"
+
+  # Regex hard-drops. Defaults cover EVM + Solana contract addresses and
+  # Telegram/Discord invites. Override the whole list to tune it.
+  # patterns:
+  #   - '\b0x[a-fA-F0-9]{40}\b'
+
+  # Announcing, not asking. Someone posting a result is not someone with a
+  # problem. Bare gain brags ("up 40x", "did 300%") and victory laps about
+  # one's own call are caught by built-in regexes; these cover the phrasing.
+  announcement_markers:
+    - "just launched"
+    - "now live"
+    - "we're live"
+    - "we are live"
+    - "introducing"
+    - "called it"
+    - "i called"
+    - "as i said"
+    - "told you"
+    - "told u"
+    - "took profit"
+    - "took profits"
+    - "target hit"
+    - "entry at"
+    - "easy money"
+    - "just aped"
+    - "just sent it"
+    - "lfg"
+
+  # The ask gate (the second positive filter). Keeps only replies that read as
+  # SEEKING — a question, a request, or a first-person need. This is the
+  # single biggest precision lever in the file: it removes the commentary and
+  # results-posting that keyword themes cannot distinguish from real intent.
+  #
+  # It is NOT question-mark-only. "keep missing these", "wish i aped" have no
+  # "?" and are the highest-intent replies in the sheet, so first-person pain
+  # counts as asking. Third-person commentary ("he keeps missing these") does
+  # not — a spectator narrating someone else's pain is not a buyer.
+  require_ask: true
+
+  # Extra ask vocabulary, added to the built-in patterns (never replaces them).
+  # Add phrasing your audience uses that the defaults miss.
+  ask_markers: []
+    # - "sanity check"
+    # - "am i cooked"
+
+  # Pain phrasing is matched fuzzily, and deliberately looser than
+  # `fuzzy_threshold` above (86). This gate only ever *keeps* a reply, and the
+  # announcement filters plus the stage-2 LLM still screen whatever it lets
+  # through — whereas a lead dropped here is gone for good. 75 is what clears
+  # a typo'd lead: "missd anethr runner ugh" scores 83 against "missed".
+  ask_fuzzy_threshold: 75
+
+# Domain gate (the positive filter). Keyword themes catch intent language
+# wherever it appears — "best bot" in a medical update, "what tool do you use"
+# from a backend developer. Requiring one domain signal removes that whole
+# class, which no blocklist can. A cashtag ($WIF) also counts as a signal.
+require_domain: true
+domain_terms:
+  - solana
+  - sol
+  - memecoin
+  - memecoins
+  - meme coin
+  - crypto
+  - token
+  - tokens
+  - coin
+  - coins
+  - chart
+  - charts
+  - wallet
+  - wallets
+  - whale
+  - whales
+  - pump
+  - pumped
+  - pumping
+  - rug
+  - rugged
+  - ape
+  - aped
+  - aping
+  - trenches
+  - dex
+  - dexscreener
+  - pumpfun
+  - "pump.fun"
+  - jup
+  - jupiter
+  - phantom
+  - bags
+  - runner
+  - runners
+  - moonshot
+  - degen
+  - alpha
+  - kol
+  - mcap
+  - marketcap
+  - liquidity
+  - onchain
+  - "on-chain"
+  - blockchain
+  - trading
+  - trader
+  - holders
+  # Community slang. Real buying intent is often phrased with no explicit crypto
+  # noun at all ("find these gems before they run", "fumbled the bag"), so these
+  # matter more than the formal vocabulary above — a gap here silently deletes
+  # the best leads in the sheet, and nothing recovers a reply vetoed at stage 1.
+  - gem
+  - gems
+  - 10x
+  - 50x
+  - 100x
+  - 1000x
+  - moon
+  - moonbag
+  - bag
+  - bags
+  - fumble
+  - fumbled
+  - jeet
+  - jeeted
+  - rekt
+  - hodl
+  - ath
+  - airdrop
+  - altcoin
+  - shitcoin
+  - btc
+  - eth
+  - bitcoin
+  - ethereum
+  - defi
+  - nft
+
+# retail filter: drop mega-influencers and bot/throwaway accounts.
+retail:
+  follower_min: 25
+  follower_max: 60000
+  max_age_days: 45        # ignore replies older than this (0 = no limit)
+  # The browser adapters (playwright/search) cannot read follower counts off a
+  # thread view, so those replies arrive with followers unknown and the bounds
+  # above simply do not apply to them. Set this true to drop unknowns instead
+  # of keeping them — stricter, but it discards most browser-collected rows.
+  require_followers: false
+
+# scoring -> intent bucket
+scoring:
+  question_bonus: 2       # text contains "?"
+  engagement_ge_5: 1
+  engagement_ge_50: 1
+  high_cutoff: 6
+  med_cutoff: 3
+
+# only export replies at/above this intent
+export_min_intent: "MED"
+
+database: replies.db
+
+# Search queries for the 'search' adapter (finds the pain anywhere on X, not just
+# under the accounts above). Latest tab. -filter:links drops promo/link spam.
+searches:
+  - label: "FOMO / too late"
+    query: '(fumbled OR "always miss" OR "too late" OR "missed the pump" OR "missed the run") (solana OR memecoin OR trenches) -filter:links min_faves:1'
+  - label: "Discovery ask"
+    query: '("how do you" OR "how do i" OR "how are you") (find OR catch OR finding) (memecoins OR gems OR runners OR coins) early -filter:links'
+  - label: "Regret"
+    query: '("wish i bought" OR "wish i aped" OR "should have aped" OR "shouldnt have sold" OR jeeted) (solana OR memecoin) -filter:links'
+  - label: "Keep missing"
+    query: '("keep missing" OR "always too late" OR "never catch" OR "priced out") (pump OR runner OR memecoin OR solana) -filter:links'
+  - label: "Whale tracking"
+    query: '(how OR "best way") (track OR monitor OR copy) (whale OR "smart money" OR wallets) (solana OR memecoin) -filter:links'
+  - label: "Tooling"
+    query: '("what tool" OR "what scanner" OR "which bot" OR "best scanner" OR "what are you using") (solana OR memecoin OR trenches OR token) -filter:links'
+  - label: "Rug fatigue"
+    query: '("got rugged" OR "another rug" OR "tired of getting rugged" OR "so many rugs" OR "sick of rugs") (solana OR memecoin) -filter:links'
+  - label: "Copy / wallet"
+    query: '("copy trade" OR "track wallets" OR "wallet tracker" OR "follow smart money") (solana OR memecoin) -filter:links'
+  - label: "Newcomer"
+    query: '("new to" OR "just started") (solana OR memecoins OR "the trenches") (help OR tips OR "where do i start") -filter:links'
+
+# LLM intent gate (stage 2). Confirms keyword hits and vetoes sarcasm/negation
+# ("glad I missed that rug" -> not a lead). Fail-open: if disabled or the API
+# errors, the pipeline keeps the keyword verdict. Default endpoint is NVIDIA NIM
+# (OpenAI-compatible); change base_url/model for any other provider.
+#   1) key from build.nvidia.com; set env:  setx NVIDIA_API_KEY "nvapi-..."
+#   2) flip enabled: true, then:  py -3 leads.py
+llm:
+  enabled: true
+  base_url: "https://integrate.api.nvidia.com/v1"
+  model: "meta/llama-3.1-8b-instruct"    # 8b is fast but a weak judge; on a 101-row sample it vetoed 1 row where
+                                         # meta/llama-3.3-70b-instruct vetoed 40. Prefer 70b and raise `timeout`.
+  api_key_env: "NVIDIA_API_KEY"          # env var holding the key (preferred over hardcoding)
+  api_key: ""                            # leave EMPTY — the key is read from the NVIDIA_API_KEY env var (never commit a real key here)
+  timeout: 600                           # SECONDS, per API call — not per run. 45 was too short for a single
+                                         # large-model call (one 8-post batch measured 195s on NVIDIA's free
+                                         # tier), so every batch timed out and fail_open silently kept the rows
+                                         # unjudged. Verdicts cache by reply_id, so a slow first run is paid once.
+  batch_size: 10                         # posts per API call (turns 200 calls into ~20). Two opposing limits
+                                         # bind: free-tier latency is mostly per-call QUEUE time, which favours
+                                         # big batches, while the server returns HTTP 504 when one call runs too
+                                         # long, which favours small ones. 10 clears both; tune if yours differ.
+  requests_per_min: 35                   # stay under NVIDIA free-tier 40 RPM
+  min_confidence: 0.5                    # below this, defer to the keyword verdict
+  fail_open: true
+  json_mode: true                        # auto-disables if a model rejects response_format

@@ -1,0 +1,4 @@
+PyYAML>=6.0
+requests>=2.31        # official-API adapter only
+rapidfuzz>=3.0        # optional; pipeline falls back to stdlib difflib if absent
+openpyxl>=3.1         # build_lead_sheet.py (Leads.xlsx); the sheet step crashes without it

@@ -1,0 +1,89 @@
+# ============================================================================
+#  Your private config — account/call lists (only the *.example is committed)
+# ============================================================================
+config.yaml
+pipeline/config.yaml
+scraper_config.py
+
+# ============================================================================
+#  Secrets & credentials — NEVER commit these
+# ============================================================================
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# Browser session / cookies (contain live auth_token — a real credential)
+x_session.json
+*_session.json
+cookies.json
+cookies.txt
+cookies.pkl
+storage_state.json
+
+# twscrape (standalone x_scraper.py) — account credentials & session store
+# accounts.txt: plaintext username:password:email:email_pw — NEVER commit
+accounts.txt
+# accounts.db: twscrape's SQLite store of logged-in account sessions/tokens
+accounts.db
+# seen_handles.json: dedupe log of real third-party handles you've contacted
+seen_handles.json
+# x_targets_scraped.csv: scraped leads (also caught by *.csv; explicit for clarity)
+x_targets_scraped.csv
+# hate_terms.txt: the veto term list. Kept out of git so slurs are not committed
+# to the repo; supply it locally and point veto.hate_terms_file at it.
+hate_terms.txt
+*_terms.txt
+
+# ============================================================================
+#  Scraped output & private data (third-party handles, lead lists, trackers)
+# ============================================================================
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# Spreadsheets / documents (lead sheets, proof logs, weekly targets, notes)
+*.xlsx
+*.xls
+*.docx
+*.doc
+
+# Generated CSV exports — keep only the synthetic sample used by the docs/tests
+*.csv
+!sample_manual_replies.csv
+
+# LibreOffice / office lock files
+.~lock.*#
+
+# ============================================================================
+#  Python
+# ============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+.coverage
+htmlcov/
+
+# ============================================================================
+#  Claude Code local artifacts (worktrees, job scratch) — never commit
+# ============================================================================
+.claude/
+
+# ============================================================================
+#  OS / editor
+# ============================================================================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
